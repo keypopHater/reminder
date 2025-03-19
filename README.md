@@ -1,6 +1,6 @@
 <<<<<<< HEAD
-Ваши изменения
+first version of drug reminder
 =======
-Изменения из удалённого репозитория
+changes from remote repo
 >>>>>>> main
 # reminder
