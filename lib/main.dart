@@ -6,8 +6,8 @@ import 'package:timezone/timezone.dart' as tz;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  tz.initializeTimeZones(); // Инициализация часовых поясов
-  await NotificationService().initNotifications(); // Инициализация уведомлений
+  tz.initializeTimeZones();
+  await NotificationService().initNotifications();
   runApp(const MyApp());
 }
 
@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'İlaç Hatırlatma',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.green,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: const ReminderPage(),
@@ -38,56 +38,46 @@ class _ReminderPageState extends State<ReminderPage> {
   final List<Map<String, dynamic>> reminders = [];
   final TextEditingController nameController = TextEditingController();
   final NotificationService notificationService = NotificationService();
-  int _selectedMinutes = 10; // Default selected minutes
+  int _selectedInterval = 6; // Интервал приема в часах
+  String _selectedDuration = '1 Hafta';
+  String _selectedTimeOfDay = 'Sabah';
 
-  // Добавляем новое напоминание
+  final List<String> durations = ['1 Hafta', '2 Hafta', '1 Ay', '6 Ay', '1 Yıl', '2 Yıl'];
+  final List<String> timeOfDayOptions = ['Sabah', 'Öğle', 'Akşam'];
+
   void addReminder() {
     if (nameController.text.isNotEmpty) {
-      int minutes = _selectedMinutes;
-      int seconds = minutes * 60; // Переводим минуты в секунды
       setState(() {
         reminders.add({
           'name': nameController.text,
-          'time': minutes,
-          'remaining': seconds,
+          'interval': _selectedInterval,
+          'duration': _selectedDuration,
+          'timeOfDay': _selectedTimeOfDay,
         });
       });
-      notificationService.scheduleNotification(reminders.length, nameController.text, seconds);
-
-      // Запускаем таймер для отсчета времени
-      startTimer(reminders.length - 1, seconds);
-
       nameController.clear();
+      // Add notification after reminder is added
+      notificationService.scheduleNotification(
+        _selectedInterval,
+        'İlaç Hatırlatma',
+        '${nameController.text} içme zamanı geldi!',
+      );
     }
   }
 
-  // Удаляем напоминание
   void removeReminder(int index) {
     setState(() {
       reminders.removeAt(index);
     });
   }
 
-  // Запускаем таймер
-  void startTimer(int index, int seconds) {
-    Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        if (reminders[index]['remaining'] > 0) {
-          reminders[index]['remaining']--;
-        } else {
-          timer.cancel();
-        }
-      });
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.teal[50],
+      backgroundColor: Colors.green[50],
       appBar: AppBar(
         title: const Text('İlaç Hatırlatma'),
-        backgroundColor: Colors.teal,
+        backgroundColor: Colors.green,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -104,47 +94,85 @@ class _ReminderPageState extends State<ReminderPage> {
                 labelText: 'İlaç Adını Giriniz',
                 border: OutlineInputBorder(),
                 focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.teal),
+                  borderSide: BorderSide(color: Colors.green),
                 ),
               ),
             ),
             const SizedBox(height: 20),
             const Text(
-              'Hatırlatma Süresi:',
+              'İçme Aralığı (Saat):',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.remove_circle_outline, size: 30, color: Colors.teal),
+                  icon: const Icon(Icons.remove_circle_outline, size: 30, color: Colors.green),
                   onPressed: () {
                     setState(() {
-                      if (_selectedMinutes > 1) {
-                        _selectedMinutes--;
+                      if (_selectedInterval > 1) {
+                        _selectedInterval--;
                       }
                     });
                   },
                 ),
                 Text(
-                  '$_selectedMinutes dakika',
+                  '$_selectedInterval saat',
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.add_circle_outline, size: 30, color: Colors.teal),
+                  icon: const Icon(Icons.add_circle_outline, size: 30, color: Colors.green),
                   onPressed: () {
                     setState(() {
-                      _selectedMinutes++;
+                      _selectedInterval++;
                     });
                   },
                 ),
               ],
             ),
             const SizedBox(height: 20),
+            const Text(
+              'Kullanım Süresi:',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            DropdownButton<String>(
+              value: _selectedDuration,
+              items: durations.map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+              onChanged: (newValue) {
+                setState(() {
+                  _selectedDuration = newValue!;
+                });
+              },
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'İçme Zamanı:',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            DropdownButton<String>(
+              value: _selectedTimeOfDay,
+              items: timeOfDayOptions.map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+              onChanged: (newValue) {
+                setState(() {
+                  _selectedTimeOfDay = newValue!;
+                });
+              },
+            ),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: addReminder,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal, // Заменили primary на backgroundColor
+                backgroundColor: Colors.green,
                 padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 50),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
               ),
@@ -158,14 +186,12 @@ class _ReminderPageState extends State<ReminderPage> {
               child: ListView.builder(
                 itemCount: reminders.length,
                 itemBuilder: (context, index) {
-                  int remainingMinutes = (reminders[index]['remaining'] ~/ 60);
-                  int remainingSeconds = reminders[index]['remaining'] % 60;
                   return Card(
-                    color: Colors.teal[100],
+                    color: Colors.green[100],
                     margin: const EdgeInsets.symmetric(vertical: 10),
                     child: ListTile(
                       title: Text(
-                          '${reminders[index]['name']} - ${remainingMinutes}m ${remainingSeconds}s'),
+                          '${reminders[index]['name']} - ${reminders[index]['interval']} saat - ${reminders[index]['duration']} - ${reminders[index]['timeOfDay']}'),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),
                         onPressed: () => removeReminder(index),
@@ -183,32 +209,53 @@ class _ReminderPageState extends State<ReminderPage> {
 }
 
 class NotificationService {
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
 
   // Инициализация уведомлений
   Future<void> initNotifications() async {
-    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
+    flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+    const AndroidInitializationSettings initializationSettingsAndroid =
+    AndroidInitializationSettings('app_icon');
+
+    // Упрощённая инициализация iOS
+
+
+    final InitializationSettings initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+    );
+
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
-  // Планирование уведомления
-  Future<void> scheduleNotification(int id, String name, int seconds) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-        'channel_id', 'channel_name',
-        importance: Importance.max,
-        priority: Priority.high,
-        sound: RawResourceAndroidNotificationSound('notification')
-    );
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
+  // Планирование уведомлений
+  Future<void> scheduleNotification(int interval, String title, String body) async {
+    final tz.TZDateTime scheduledDate = _nextInstanceOfTimeOfDay(interval);
+
     await flutterLocalNotificationsPlugin.zonedSchedule(
-      id,
-      'İlaç Zamanı!',
-      '$name ilacını almayı unutma!',
-      tz.TZDateTime.now(tz.local).add(Duration(seconds: seconds)),
-      platformChannelSpecifics,
+      0,
+      title,
+      body,
+      scheduledDate,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'your_channel_id',
+          'your_channel_name',
+          channelDescription: 'your_channel_description',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
       androidAllowWhileIdle: true,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      uiLocalNotificationDateInterpretation:
+      UILocalNotificationDateInterpretation.wallClockTime,
+      matchDateTimeComponents: DateTimeComponents.time,
     );
+  }
+
+  // Вычисление следующего времени для уведомления
+  tz.TZDateTime _nextInstanceOfTimeOfDay(int interval) {
+    final now = tz.TZDateTime.now(tz.local);
+    return tz.TZDateTime.now(tz.local).add(Duration(hours: interval));
   }
 }
